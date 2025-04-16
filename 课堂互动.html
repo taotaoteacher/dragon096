@@ -1,0 +1,829 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教学互动平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.0/mammoth.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        .content-container {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        .main-content {
+            flex: 3;
+        }
+        .annotation-sidebar {
+            flex: 1;
+            border-left: 1px solid #ddd;
+            padding-left: 15px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .text-content {
+            border: 1px solid #eee;
+            padding: 15px;
+            line-height: 1.8;
+            user-select: text;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+        .img-container {
+            position: relative;
+            margin-bottom: 15px;
+            border: 1px solid #eee;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+        }
+        .img-container img {
+            max-width: 100%;
+            cursor: crosshair;
+            display: block;
+        }
+        .text-highlight {
+            background-color: rgba(255, 255, 0, 0.5);
+            cursor: pointer;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        .text-annotation {
+            background-color: rgba(144, 238, 144, 0.5);
+            cursor: pointer;
+            transition: background-color 0.3s;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        .text-annotation:hover {
+            background-color: rgba(144, 238, 144, 0.8);
+        }
+        .img-annotation {
+            position: absolute;
+            background-color: rgba(255, 0, 0, 0.3);
+            border: 1px dashed #f00;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .annotation-card {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #eee;
+        }
+        .annotation-card:hover {
+            background-color: #e9ecef;
+            transform: translateX(2px);
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        .annotation-card .student-name {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .annotation-card .timestamp {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        .annotation-card .annotation-text {
+            font-style: italic;
+            color: #555;
+            margin: 5px 0;
+            background: #fff;
+            padding: 5px;
+            border-radius: 3px;
+            border-left: 3px solid #6c757d;
+        }
+        .annotation-form {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f1f8ff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+        }
+        .annotation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        #text-content p {
+            margin-bottom: 1.5em;
+        }
+        .highlight {
+            animation: highlight-fade 2s;
+        }
+        @keyframes highlight-fade {
+            0% { background-color: rgba(255, 255, 0, 0.8); }
+            100% { background-color: rgba(255, 255, 0, 0); }
+        }
+        .no-annotations {
+            color: #6c757d;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
+        #discussion-area {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #fafafa;
+            border-radius: 5px;
+        }
+        .discussion-message {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .teacher-message {
+            background-color: #e9f7fe;
+            border-left: 4px solid #2196F3;
+        }
+        .student-message {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+        }
+        .system-message {
+            background-color: #f5f5f5;
+            border-left: 4px solid #9E9E9E;
+            font-size: 0.9em;
+        }
+        .card {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+        }
+        #teacher-actions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #0d6efd;
+        }
+        #word-preview {
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                        <h5 class="mb-0">课堂内容</h5>
+                        <div id="role-indicator" class="badge bg-light text-primary">老师</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="content-container">
+                            <div class="main-content">
+                                <!-- 文字内容区域 -->
+                                <div id="text-content" class="text-content mb-4">
+                                    <p>这里是教学文字内容的第一段。老师可以上传或输入教学内容，学生可以在文字上添加批注。</p>
+                                    <p>这是第二段教学内容。选中任何文字可以添加评论和批注，批注会显示在右侧边栏。</p>
+                                    <p>教学内容的第三段示例。这个系统支持针对具体句子的精细化批注和讨论。</p>
+                                </div>
+                                
+                                <!-- 图片内容区域 -->
+                                <div id="image-content" class="mb-4">
+                                    <div class="img-container">
+                                        <img src="https://via.placeholder.com/600x400?text=教学图片" alt="教学图片" id="teach-image" data-image-id="1">
+                                    </div>
+                                </div>
+                                
+                                <!-- 老师功能区 -->
+                                <div id="teacher-actions" class="mb-3">
+                                    <div class="upload-area" id="word-upload-area">
+                                        <div>拖放Word文档到这里或点击上传</div>
+                                        <input type="file" id="word-upload" accept=".docx" style="display: none;">
+                                    </div>
+                                    <div id="word-preview"></div>
+                                    
+                                    <div class="input-group mb-2">
+                                        <textarea id="text-input" class="form-control" placeholder="输入教学内容..." rows="3"></textarea>
+                                    </div>
+                                    <div class="d-flex gap-2 mb-3">
+                                        <button id="add-text-btn" class="btn btn-primary">添加文字</button>
+                                        <button id="upload-image-btn" class="btn btn-secondary">上传图片</button>
+                                        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                                    </div>
+                                </div>
+                                
+                                <!-- 讨论区 -->
+                                <div class="mt-4">
+                                    <h5>整体讨论区</h5>
+                                    <div id="discussion-area">
+                                        <div class="system-message discussion-message">系统消息：欢迎使用教学互动平台</div>
+                                    </div>
+                                    <div class="input-group mt-2">
+                                        <input id="comment-input" type="text" class="form-control" placeholder="输入评论...">
+                                        <button id="send-comment-btn" class="btn btn-primary">发送</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 批注侧边栏 -->
+                            <div class="annotation-sidebar">
+                                <h5>批注与反馈</h5>
+                                <div id="annotations-container">
+                                    <div class="no-annotations">选中文字或图片区域可以添加批注</div>
+                                </div>
+                                
+                                <!-- 批注表单 (默认隐藏) -->
+                                <div id="annotation-form" class="annotation-form" style="display: none;">
+                                    <div class="mb-2">
+                                        <label for="annotation-comment" class="form-label">你的批注</label>
+                                        <textarea id="annotation-comment" class="form-control" rows="3" placeholder="请输入你的批注内容..."></textarea>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <button id="cancel-annotation-btn" class="btn btn-outline-secondary">取消</button>
+                                        <button id="submit-annotation-btn" class="btn btn-primary">提交</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 侧边栏 -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">课堂信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6>课堂代码: <span id="class-code" class="badge bg-success">ABCD12</span></h6>
+                            <button id="copy-code-btn" class="btn btn-sm btn-outline-secondary">复制代码</button>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>学生列表 (<span id="student-count">0</span>/10)</h6>
+                            <div id="student-list" class="list-group">
+                                <!-- 学生列表将在这里显示 -->
+                            </div>
+                        </div>
+                        
+                        <div id="student-join" class="mb-3">
+                            <h6>加入课堂</h6>
+                            <div class="input-group mb-2">
+                                <input type="text" id="join-code" class="form-control" placeholder="输入课堂代码">
+                                <button id="join-class-btn" class="btn btn-success">加入</button>
+                            </div>
+                            <input type="text" id="student-name" class="form-control mb-2" placeholder="你的名字">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 用户信息
+            let isTeacher = true;
+            let currentUser = { name: '老师' };
+            let currentClassCode = 'ABCD12';
+            let students = [];
+            let annotations = [];
+            
+            // 当前选中的内容
+            let currentSelection = {
+                type: null, // 'text' 或 'image'
+                range: null, // 文字范围
+                coords: null, // 图片坐标
+                element: null, // 关联的元素
+                highlight: null // 高亮元素
+            };
+            
+            // DOM元素
+            const textContent = document.getElementById('text-content');
+            const teachImage = document.getElementById('teach-image');
+            const annotationsContainer = document.getElementById('annotations-container');
+            const annotationForm = document.getElementById('annotation-form');
+            const annotationComment = document.getElementById('annotation-comment');
+            const submitAnnotationBtn = document.getElementById('submit-annotation-btn');
+            const cancelAnnotationBtn = document.getElementById('cancel-annotation-btn');
+            const wordUploadArea = document.getElementById('word-upload-area');
+            const wordUpload = document.getElementById('word-upload');
+            const wordPreview = document.getElementById('word-preview');
+            
+            // 初始化文字选择监听
+            textContent.addEventListener('mouseup', handleTextSelection);
+            
+            // 处理文字选择
+            function handleTextSelection() {
+                const selection = window.getSelection();
+                if (!selection.isCollapsed && selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    
+                    // 检查选择是否在文本内容区域内
+                    if (textContent.contains(range.commonAncestorContainer)) {
+                        const selectedText = range.toString().trim();
+                        
+                        // 检查选中文字是否有效（至少2个字符）
+                        if (selectedText.length >= 2) {
+                            // 保存选中的文字范围
+                            currentSelection = {
+                                type: 'text',
+                                range: range,
+                                element: textContent,
+                                text: selectedText
+                            };
+                            
+                            // 高亮选中文字
+                            highlightSelectedText(range);
+                            // 显示批注表单
+                            showAnnotationForm();
+                        } else {
+                            alert('请选择至少两个字符进行批注');
+                            window.getSelection().removeAllRanges();
+                        }
+                    }
+                }
+            }
+            
+            // 高亮选中文字
+            function highlightSelectedText(range) {
+                // 先移除之前的高亮
+                removeTextHighlights();
+                
+                try {
+                    // 创建高亮span
+                    const span = document.createElement('span');
+                    span.className = 'text-highlight';
+                    
+                    // 用span包裹选中文本
+                    range.surroundContents(span);
+                    
+                    // 保存高亮引用
+                    currentSelection.highlight = span;
+                } catch (e) {
+                    console.error('高亮文字失败:', e);
+                    alert('无法在此位置添加批注，请选择完整的词语或句子');
+                    window.getSelection().removeAllRanges();
+                }
+            }
+            
+            // 移除文字高亮
+            function removeTextHighlights() {
+                document.querySelectorAll('.text-highlight').forEach(highlight => {
+                    const parent = highlight.parentNode;
+                    parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                    parent.normalize(); // 合并相邻的文本节点
+                });
+            }
+            
+            // 初始化图片标注监听
+            teachImage.addEventListener('click', function(e) {
+                if (isTeacher) return;
+                
+                // 创建标注区域
+                const rect = teachImage.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // 保存选中的图片位置
+                currentSelection = {
+                    type: 'image',
+                    coords: { x, y },
+                    element: teachImage
+                };
+                
+                // 显示批注表单
+                showAnnotationForm();
+            });
+            
+            // 显示批注表单
+            function showAnnotationForm() {
+                if (isTeacher) return;
+                
+                annotationForm.style.display = 'block';
+                annotationComment.value = '';
+                annotationComment.focus();
+                
+                // 滚动到表单位置
+                annotationForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            
+            // 隐藏批注表单
+            function hideAnnotationForm() {
+                annotationForm.style.display = 'none';
+                annotationComment.value = '';
+                currentSelection = { type: null };
+                
+                // 清除文字选择
+                window.getSelection().removeAllRanges();
+            }
+            
+            // 提交批注
+            submitAnnotationBtn.addEventListener('click', function() {
+                const comment = annotationComment.value.trim();
+                if (comment && currentSelection.type) {
+                    // 确保选中文字仍然存在
+                    if (currentSelection.type === 'text' && !currentSelection.highlight) {
+                        alert('选中的文字已失效，请重新选择');
+                        hideAnnotationForm();
+                        return;
+                    }
+
+                    const annotation = {
+                        id: Date.now(),
+                        type: currentSelection.type,
+                        student: currentUser.name,
+                        comment,
+                        timestamp: new Date().toLocaleTimeString(),
+                        data: {}
+                    };
+                    
+                    if (currentSelection.type === 'text') {
+                        // 文字批注
+                        annotation.data = {
+                            text: currentSelection.text,
+                            offset: getTextOffset(currentSelection.range),
+                            highlightId: 'highlight-' + annotation.id
+                        };
+                        
+                        // 更新高亮元素的ID和类名
+                        currentSelection.highlight.id = annotation.data.highlightId;
+                        currentSelection.highlight.className = 'text-annotation';
+                        currentSelection.highlight.dataset.annotationId = annotation.id;
+                    } else if (currentSelection.type === 'image') {
+                        // 图片批注
+                        const { x, y } = currentSelection.coords;
+                        
+                        // 创建标注元素
+                        const div = document.createElement('div');
+                        div.className = 'img-annotation';
+                        div.dataset.annotationId = annotation.id;
+                        div.style.left = (x - 15) + 'px';
+                        div.style.top = (y - 15) + 'px';
+                        div.style.width = '30px';
+                        div.style.height = '30px';
+                        
+                        teachImage.parentNode.appendChild(div);
+                        
+                        // 保存批注数据
+                        annotation.data = {
+                            x: x / teachImage.width,
+                            y: y / teachImage.height
+                        };
+                    }
+                    
+                    // 添加到批注列表
+                    annotations.push(annotation);
+                    renderAnnotation(annotation);
+                    
+                    // 添加到讨论区
+                    addDiscussionMessage(currentUser.name, `添加了${annotation.type === 'text' ? '文字' : '图片'}批注`);
+                    
+                    // 隐藏表单并重置选择
+                    hideAnnotationForm();
+                    window.getSelection().removeAllRanges();
+                } else {
+                    alert('请输入批注内容');
+                }
+            });
+            
+            // 取消批注
+            cancelAnnotationBtn.addEventListener('click', function() {
+                // 移除临时高亮
+                if (currentSelection.highlight) {
+                    const parent = currentSelection.highlight.parentNode;
+                    parent.replaceChild(document.createTextNode(currentSelection.highlight.textContent), currentSelection.highlight);
+                    parent.normalize();
+                }
+                hideAnnotationForm();
+                window.getSelection().removeAllRanges();
+            });
+            
+            // 渲染单个批注
+            function renderAnnotation(annotation) {
+                // 移除"无批注"提示
+                const noAnnotations = annotationsContainer.querySelector('.no-annotations');
+                if (noAnnotations) {
+                    noAnnotations.remove();
+                }
+                
+                const annotationCard = document.createElement('div');
+                annotationCard.className = 'annotation-card';
+                annotationCard.dataset.annotationId = annotation.id;
+                
+                annotationCard.innerHTML = `
+                    <div class="annotation-header">
+                        <span class="student-name">${annotation.student}</span>
+                        <span class="timestamp">${annotation.timestamp}</span>
+                    </div>
+                    ${annotation.type === 'text' ? 
+                      `<div class="annotation-text">"${annotation.data.text}"</div>` : 
+                      `<div class="annotation-text">图片标注</div>`}
+                    <div class="annotation-comment">${annotation.comment}</div>
+                `;
+                
+                // 点击批注卡片高亮原文/原图
+                annotationCard.addEventListener('click', function() {
+                    highlightAnnotation(annotation);
+                });
+                
+                // 添加到容器顶部
+                annotationsContainer.insertBefore(annotationCard, annotationsContainer.firstChild);
+            }
+            
+            // 高亮显示批注对应的原文/原图
+            function highlightAnnotation(annotation) {
+                // 移除之前的高亮
+                document.querySelectorAll('.highlight').forEach(el => {
+                    el.classList.remove('highlight');
+                });
+                
+                if (annotation.type === 'text') {
+                    // 文字批注高亮
+                    const span = document.querySelector(`#${annotation.data.highlightId}`);
+                    if (span) {
+                        span.classList.add('highlight');
+                        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else if (annotation.type === 'image') {
+                    // 图片批注高亮
+                    const div = document.querySelector(`.img-annotation[data-annotation-id="${annotation.id}"]`);
+                    if (div) {
+                        div.classList.add('highlight');
+                        div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }
+            
+            // 获取文字在父元素中的偏移量
+            function getTextOffset(range) {
+                const parent = range.commonAncestorContainer;
+                const text = range.toString();
+                const parentText = parent.textContent;
+                return parentText.indexOf(text);
+            }
+            
+            // 初始化用户界面
+            function initUI() {
+                if (!isTeacher) {
+                    document.getElementById('role-indicator').textContent = '学生';
+                    document.getElementById('role-indicator').className = 'badge bg-success text-white';
+                    document.getElementById('teacher-actions').style.display = 'none';
+                }
+                
+                document.getElementById('class-code').textContent = currentClassCode;
+                updateStudentList();
+            }
+            
+            // 更新学生列表
+            function updateStudentList() {
+                const studentList = document.getElementById('student-list');
+                studentList.innerHTML = '';
+                
+                students.forEach(student => {
+                    const studentItem = document.createElement('div');
+                    studentItem.className = 'list-group-item';
+                    studentItem.textContent = student.name;
+                    studentList.appendChild(studentItem);
+                });
+                
+                document.getElementById('student-count').textContent = students.length;
+            }
+            
+            // 添加讨论消息
+            function addDiscussionMessage(sender, text, isSystem = false) {
+                const discussionArea = document.getElementById('discussion-area');
+                const messageDiv = document.createElement('div');
+                
+                if (isSystem) {
+                    messageDiv.className = 'system-message discussion-message';
+                } else {
+                    messageDiv.className = sender === '老师' ? 
+                        'teacher-message discussion-message' : 
+                        'student-message discussion-message';
+                }
+                
+                messageDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+                discussionArea.appendChild(messageDiv);
+                discussionArea.scrollTop = discussionArea.scrollHeight;
+            }
+            
+            // Word文档处理
+            wordUploadArea.addEventListener('click', function() {
+                wordUpload.click();
+            });
+            
+            wordUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    processWordDocument(file);
+                }
+            });
+            
+            // 支持拖放上传
+            wordUploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                wordUploadArea.style.borderColor = '#0d6efd';
+                wordUploadArea.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+            });
+            
+            wordUploadArea.addEventListener('dragleave', function() {
+                wordUploadArea.style.borderColor = '#ccc';
+                wordUploadArea.style.backgroundColor = '';
+            });
+            
+            wordUploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                wordUploadArea.style.borderColor = '#ccc';
+                wordUploadArea.style.backgroundColor = '';
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.name.endsWith('.docx')) {
+                    processWordDocument(file);
+                } else {
+                    alert('请上传.docx格式的Word文档');
+                }
+            });
+            
+            // 处理Word文档
+            function processWordDocument(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const arrayBuffer = event.target.result;
+                    
+                    mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                        .then(function(result) {
+                            // 处理文本内容
+                            const text = result.value;
+                            const paragraphs = text.split('\n').filter(p => p.trim() !== '');
+                            
+                            // 清空现有内容
+                            textContent.innerHTML = '';
+                            
+                            // 添加新内容
+                            paragraphs.forEach(p => {
+                                const paragraph = document.createElement('p');
+                                paragraph.textContent = p;
+                                textContent.appendChild(paragraph);
+                            });
+                            
+                            // 处理图片
+                            return mammoth.extractRawText({ arrayBuffer: arrayBuffer, includeEmbedded: true });
+                        })
+                        .then(function(result) {
+                            // 处理图片
+                            const images = result.messages
+                                .filter(m => m.type === 'warning' && m.message.includes('Image'))
+                                .map(m => {
+                                    const match = m.message.match(/Image: (.*?) \(/);
+                                    return match ? match[1] : null;
+                                })
+                                .filter(Boolean);
+                            
+                            if (images.length > 0) {
+                                // 清空图片区域
+                                document.getElementById('image-content').innerHTML = '';
+                                
+                                // 添加图片
+                                images.forEach((imgSrc, index) => {
+                                    const imgContainer = document.createElement('div');
+                                    imgContainer.className = 'img-container';
+                                    
+                                    const img = document.createElement('img');
+                                    img.src = imgSrc;
+                                    img.alt = `Word文档图片 ${index + 1}`;
+                                    img.dataset.imageId = `word-img-${index}`;
+                                    
+                                    imgContainer.appendChild(img);
+                                    document.getElementById('image-content').appendChild(imgContainer);
+                                });
+                            }
+                            
+                            wordPreview.innerHTML = '<div class="alert alert-success">Word文档导入成功</div>';
+                            setTimeout(() => wordPreview.style.display = 'none', 2000);
+                            addDiscussionMessage('老师', '上传了Word文档教学内容');
+                        })
+                        .catch(function(error) {
+                            console.error('Word文档处理错误:', error);
+                            wordPreview.innerHTML = '<div class="alert alert-danger">Word文档处理失败: ' + error.message + '</div>';
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+                wordPreview.style.display = 'block';
+                wordPreview.innerHTML = '<div class="alert alert-info">正在处理Word文档...</div>';
+            }
+            
+            // 发送讨论消息
+            document.getElementById('send-comment-btn').addEventListener('click', function() {
+                const comment = document.getElementById('comment-input').value.trim();
+                if (comment) {
+                    addDiscussionMessage(currentUser.name, comment);
+                    document.getElementById('comment-input').value = '';
+                }
+            });
+            
+            // 复制课堂代码
+            document.getElementById('copy-code-btn').addEventListener('click', function() {
+                navigator.clipboard.writeText(currentClassCode)
+                    .then(() => alert('课堂代码已复制!'));
+            });
+            
+            // 学生加入课堂
+            document.getElementById('join-class-btn').addEventListener('click', function() {
+                const code = document.getElementById('join-code').value.trim();
+                const name = document.getElementById('student-name').value.trim();
+                
+                if (code && name) {
+                    isTeacher = false;
+                    currentUser.name = name;
+                    currentClassCode = code;
+                    students.push({ name });
+                    initUI();
+                    
+                    addDiscussionMessage('系统', `${name} 加入了课堂`, true);
+                    alert(`成功加入课堂 ${code} 作为 ${name}`);
+                } else {
+                    alert('请输入课堂代码和你的名字');
+                }
+            });
+            
+            // 老师添加文字
+            document.getElementById('add-text-btn').addEventListener('click', function() {
+                const text = document.getElementById('text-input').value.trim();
+                if (text) {
+                    const p = document.createElement('p');
+                    p.textContent = text;
+                    textContent.appendChild(p);
+                    document.getElementById('text-input').value = '';
+                    
+                    addDiscussionMessage('老师', '添加了新的教学内容');
+                }
+            });
+            
+            // 老师上传图片
+            document.getElementById('upload-image-btn').addEventListener('click', function() {
+                document.getElementById('image-upload').click();
+            });
+            
+            document.getElementById('image-upload').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file && file.type.match('image.*')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // 清空图片区域
+                        const imageContent = document.getElementById('image-content');
+                        imageContent.innerHTML = '';
+                        
+                        // 创建新的图片容器
+                        const imgContainer = document.createElement('div');
+                        imgContainer.className = 'img-container';
+                        
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.alt = '上传的教学图片';
+                        img.dataset.imageId = 'uploaded-img';
+                        
+                        imgContainer.appendChild(img);
+                        imageContent.appendChild(imgContainer);
+                        
+                        // 更新teachImage引用
+                        teachImage = img;
+                        
+                        addDiscussionMessage('老师', '上传了新的教学图片');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // 初始化
+            initUI();
+        });
+    </script>
+</body>
+</html>
